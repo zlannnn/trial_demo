@@ -1,28 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { useVoiceInput } from "~/features/voice/hooks/use-voice-input";
 import { useVoiceOutput } from "~/features/voice/hooks/use-voice-output";
+import { api } from "~/trpc/react";
 
-import {
-  createConversation,
-  fetchAppConfig,
-  fetchConversations,
-  fetchMessages,
-  sendChatMessage,
-} from "../lib/chat-api";
 import type {
   AppConfig,
   ChatMessage,
   ChatSession,
   ChatStatus,
   ConversationSummary,
+  TaskProgress,
   ToolCallInfo,
 } from "../types";
 
 export function useChat() {
-  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const utils = api.useUtils();
+
   const [activeConversationId, setActiveConversationId] = useState<
     string | undefined
   >();
@@ -31,13 +27,48 @@ export function useChat() {
   const [error, setError] = useState<string | null>(null);
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCallInfo[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
-  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [taskProgress, setTaskProgress] = useState<TaskProgress | null>(null);
+  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
 
   const sessionRef = useRef<ChatSession>({});
 
   const voiceInput = useVoiceInput({ language: "zh" });
   const voiceOutput = useVoiceOutput();
+
+  const { data: appConfigData } = api.config.getAppConfig.useQuery(undefined, {
+    staleTime: 60_000,
+  });
+  const appConfig: AppConfig | null = appConfigData ?? null;
+
+  const {
+    data: conversationsData,
+    isLoading: isLoadingConversations,
+    refetch: refetchConversations,
+  } = api.chat.listConversations.useQuery(undefined, {
+    staleTime: 10_000,
+  });
+  const conversations: ConversationSummary[] =
+    conversationsData?.conversations ?? [];
+
+  const createConversationMutation = api.chat.createConversation.useMutation({
+    onSuccess: async () => {
+      await utils.chat.listConversations.invalidate();
+    },
+  });
+
+  const deleteConversationMutation = api.chat.deleteConversation.useMutation({
+    onSuccess: async () => {
+      await utils.chat.listConversations.invalidate();
+    },
+  });
+
+  const deleteAllMutation = api.chat.deleteAllConversations.useMutation({
+    onSuccess: async () => {
+      await utils.chat.listConversations.invalidate();
+    },
+  });
+
+  const sendMessageMutation = api.chat.sendMessage.useMutation();
 
   const voiceSttAvailable = appConfig?.voice.sttAvailable ?? false;
   const voiceTtsAvailable = appConfig?.voice.ttsAvailable ?? false;
@@ -45,47 +76,58 @@ export function useChat() {
     appConfig?.voice.unavailableHint ??
     "请配置 OPENAI_API_KEY 以启用语音功能";
 
-  useEffect(() => {
-    void fetchAppConfig()
-      .then(setAppConfig)
-      .catch(() => {
-        /* 配置加载失败时使用默认值（纯文本模式） */
-      });
-  }, []);
+  const refreshTaskProgress = useCallback(
+    async (conversationId?: string) => {
+      const id = conversationId ?? activeConversationId;
+      if (!id) {
+        setTaskProgress(null);
+        return;
+      }
 
-  const loadConversationList = useCallback(async () => {
-    setIsLoadingConversations(true);
-    try {
-      const data = await fetchConversations();
-      setConversations(data.conversations);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "加载会话失败");
-    } finally {
-      setIsLoadingConversations(false);
-    }
-  }, []);
+      try {
+        const progress = await utils.chat.getTaskProgress.fetch({
+          conversationId: id,
+        });
+        setTaskProgress(progress);
+      } catch {
+        setTaskProgress(null);
+      }
+    },
+    [activeConversationId, utils.chat.getTaskProgress],
+  );
 
-  useEffect(() => {
-    void loadConversationList();
-  }, [loadConversationList]);
-
-  const selectConversation = useCallback(async (id: string) => {
-    setActiveConversationId(id);
+  const resetActiveChat = useCallback(() => {
+    setActiveConversationId(undefined);
+    setMessages([]);
+    setActiveToolCalls([]);
+    setTaskProgress(null);
+    sessionRef.current = {};
+    setStatus("idle");
     setError(null);
-    setStatus("loading");
-    sessionRef.current = { conversationId: id };
+    voiceOutput.stop();
+  }, [voiceOutput]);
 
-    try {
-      const msgs = await fetchMessages(id);
-      setMessages(msgs);
-      setStatus("idle");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "加载消息失败");
-      setStatus("error");
-    }
+  const selectConversation = useCallback(
+    async (id: string) => {
+      setActiveConversationId(id);
+      setError(null);
+      setStatus("loading");
+      sessionRef.current = { conversationId: id };
 
-    setIsSidebarOpen(false);
-  }, []);
+      try {
+        const data = await utils.chat.getMessages.fetch({ conversationId: id });
+        setMessages(data.messages);
+        setStatus("idle");
+        await refreshTaskProgress(id);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "加载消息失败");
+        setStatus("error");
+      }
+
+      setIsSidebarOpen(false);
+    },
+    [refreshTaskProgress, utils.chat.getMessages],
+  );
 
   const startNewChat = useCallback(async () => {
     setError(null);
@@ -94,15 +136,52 @@ export function useChat() {
     sessionRef.current = {};
 
     try {
-      const conv = await createConversation();
-      setConversations((prev) => [conv, ...prev]);
+      const conv = await createConversationMutation.mutateAsync();
       setActiveConversationId(conv.id);
       sessionRef.current = { conversationId: conv.id };
       setIsSidebarOpen(false);
+      await refreshTaskProgress(conv.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "创建会话失败");
     }
-  }, []);
+  }, [createConversationMutation, refreshTaskProgress]);
+
+  const deleteConversation = useCallback(
+    async (id: string) => {
+      setIsDeletingConversation(true);
+      setError(null);
+
+      try {
+        await deleteConversationMutation.mutateAsync({ id });
+
+        if (
+          activeConversationId === id ||
+          sessionRef.current.conversationId === id
+        ) {
+          resetActiveChat();
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "删除会话失败");
+      } finally {
+        setIsDeletingConversation(false);
+      }
+    },
+    [activeConversationId, deleteConversationMutation, resetActiveChat],
+  );
+
+  const deleteAllConversations = useCallback(async () => {
+    setIsDeletingConversation(true);
+    setError(null);
+
+    try {
+      await deleteAllMutation.mutateAsync();
+      resetActiveChat();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "清空外呼记录失败");
+    } finally {
+      setIsDeletingConversation(false);
+    }
+  }, [deleteAllMutation, resetActiveChat]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -131,7 +210,7 @@ export function useChat() {
       setStatus("loading");
 
       try {
-        const response = await sendChatMessage({
+        const response = await sendMessageMutation.mutateAsync({
           message: trimmed,
           conversationId: sessionRef.current.conversationId,
         });
@@ -171,33 +250,41 @@ export function useChat() {
         }
 
         setMessages(assistantMessages);
-        setConversations((prev) => {
-          const exists = prev.find((c) => c.id === response.conversationId);
-          const updated: ConversationSummary = {
-            id: response.conversationId,
-            startedAt: exists?.startedAt ?? new Date().toISOString(),
-            preview: trimmed.slice(0, 60),
-            messageCount: assistantMessages.length,
-          };
+        if (response.taskProgress) {
+          setTaskProgress(response.taskProgress);
+        } else {
+          void refreshTaskProgress(response.conversationId);
+        }
 
-          if (exists) {
-            return prev.map((c) =>
-              c.id === response.conversationId ? updated : c,
-            );
-          }
-          return [updated, ...prev];
-        });
+        await utils.chat.listConversations.invalidate();
 
         setStatus("idle");
         return response;
       } catch (err) {
-        setMessages((prev) => prev.filter((m) => !m.isStreaming));
-        setError(err instanceof Error ? err.message : "发送失败");
+        const errMsg = err instanceof Error ? err.message : "发送失败";
+
+        if (
+          errMsg.includes("Conversation not found") ||
+          errMsg.includes("not found")
+        ) {
+          resetActiveChat();
+        } else {
+          setMessages((prev) => prev.filter((m) => !m.isStreaming));
+        }
+
+        setError(errMsg);
         setStatus("error");
         return null;
       }
     },
-    [activeConversationId, status],
+    [
+      activeConversationId,
+      refreshTaskProgress,
+      resetActiveChat,
+      sendMessageMutation,
+      status,
+      utils.chat.listConversations,
+    ],
   );
 
   const startVoiceInput = useCallback(async () => {
@@ -238,16 +325,21 @@ export function useChat() {
     isSidebarOpen,
     setIsSidebarOpen,
     isLoadingConversations,
+    isDeletingConversation,
     appConfig,
+    taskProgress,
+    refreshTaskProgress,
     voiceSttAvailable,
     voiceTtsAvailable,
     voiceUnavailableHint,
     isRecording: voiceInput.isRecording,
     isSpeaking: voiceOutput.isSpeaking,
     recordingDurationMs: voiceInput.durationMs,
-    loadConversationList,
+    loadConversationList: () => void refetchConversations(),
     selectConversation,
     startNewChat,
+    deleteConversation,
+    deleteAllConversations,
     sendMessage,
     startVoiceInput,
     stopVoiceInput,

@@ -3,6 +3,7 @@ import type { FunctionTool } from "openai/resources/responses/responses";
 import type { z } from "zod";
 
 import { zodToOpenAIParameters } from "./helpers";
+import { completeContractConfirmationTool } from "./complete-contract-confirmation";
 import { createConversationTool } from "./create-conversation";
 import { createUserProfileTool } from "./create-user-profile";
 import { getUserProfileTool } from "./get-user-profile";
@@ -16,6 +17,7 @@ export const toolRegistry = {
   createUserProfile: createUserProfileTool,
   updateUserProfile: updateUserProfileTool,
   getUserProfile: getUserProfileTool,
+  completeContractConfirmation: completeContractConfirmationTool,
   createConversation: createConversationTool,
   saveMessage: saveMessageTool,
   searchConversationHistory: searchConversationHistoryTool,

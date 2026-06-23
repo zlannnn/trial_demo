@@ -1,10 +1,17 @@
 "use client";
 
-import { MessageSquare, Plus } from "lucide-react";
+import { PhoneCall, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Skeleton } from "~/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 
 import type { ConversationSummary } from "../types";
@@ -12,32 +19,122 @@ import type { ConversationSummary } from "../types";
 interface ConversationItemProps {
   conversation: ConversationSummary;
   isActive: boolean;
+  isDeleting?: boolean;
   onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
 export function ConversationItem({
   conversation,
   isActive,
+  isDeleting,
   onSelect,
+  onDelete,
 }: ConversationItemProps) {
+  const [confirming, setConfirming] = useState(false);
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirming(true);
+  };
+
+  const handleConfirmDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirming(false);
+    onDelete(conversation.id);
+  };
+
+  const handleCancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirming(false);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(conversation.id)}
+    <div
       className={cn(
-        "flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-sidebar-accent",
-        isActive && "bg-sidebar-accent",
+        "group relative flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all",
+        "hover:bg-cyan-500/5 hover:border-cyan-500/20 border-transparent",
+        isActive && "bg-cyan-500/10 border-cyan-500/25 ghost-glow",
+        confirming && "border-red-500/30 bg-red-500/5",
       )}
     >
-      <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium">{conversation.preview}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {formatRelativeTime(conversation.startedAt)} ·{" "}
-          {conversation.messageCount} 条消息
-        </p>
-      </div>
-    </button>
+      <button
+        type="button"
+        onClick={() => onSelect(conversation.id)}
+        disabled={isDeleting || confirming}
+        className="flex min-w-0 flex-1 items-start gap-3 text-left"
+      >
+        <PhoneCall
+          className={cn(
+            "mt-0.5 h-4 w-4 shrink-0",
+            isActive ? "text-cyan-400" : "text-muted-foreground",
+          )}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium text-foreground/90">
+            {conversation.preview}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {formatRelativeTime(conversation.startedAt)} ·{" "}
+            {conversation.messageCount} 轮对话
+          </p>
+        </div>
+      </button>
+
+      {confirming ? (
+        <div
+          className="flex shrink-0 flex-col items-end gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="text-[10px] text-red-300/80">确认删除？</span>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+              onClick={handleCancelDelete}
+              disabled={isDeleting}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              删除
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-7 w-7 shrink-0 text-muted-foreground/50 transition-colors",
+                  "hover:bg-red-500/10 hover:text-red-400",
+                  isActive && "text-muted-foreground/70",
+                )}
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+                aria-label="删除此会话"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>删除此会话</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </div>
   );
 }
 
@@ -45,49 +142,113 @@ interface ConversationListProps {
   conversations: ConversationSummary[];
   activeId?: string;
   isLoading?: boolean;
+  isDeleting?: boolean;
   onSelect: (id: string) => void;
   onNewChat: () => void;
+  onDelete: (id: string) => void;
+  onDeleteAll: () => void;
 }
 
 export function ConversationList({
   conversations,
   activeId,
   isLoading,
+  isDeleting,
   onSelect,
   onNewChat,
+  onDelete,
+  onDeleteAll,
 }: ConversationListProps) {
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+
+  const handleDeleteAll = () => {
+    setConfirmDeleteAll(false);
+    onDeleteAll();
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="p-3">
         <Button
           onClick={onNewChat}
-          className="w-full justify-start gap-2"
-          variant="outline"
+          disabled={isDeleting}
+          className="w-full justify-start gap-2 bg-cyan-600/90 text-primary-foreground hover:bg-cyan-500 shadow-lg shadow-cyan-500/10"
         >
           <Plus className="h-4 w-4" />
-          新对话
+          新建外呼会话
         </Button>
+      </div>
+
+      <div className="flex items-center justify-between px-4 pb-2">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+          外呼记录
+        </p>
+        {!isLoading && conversations.length > 0 && (
+          confirmDeleteAll ? (
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[10px] text-muted-foreground"
+                onClick={() => setConfirmDeleteAll(false)}
+                disabled={isDeleting}
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[10px] text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                onClick={handleDeleteAll}
+                disabled={isDeleting}
+              >
+                确认清空
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-[10px] text-muted-foreground hover:text-red-400"
+              onClick={() => setConfirmDeleteAll(true)}
+              disabled={isDeleting}
+            >
+              清空全部
+            </Button>
+          )
+        )}
       </div>
 
       <ScrollArea className="flex-1 px-2">
         {isLoading ? (
           <div className="space-y-2 p-2">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full rounded-lg" />
+              <Skeleton
+                key={i}
+                className="h-14 w-full rounded-xl bg-secondary/50"
+              />
             ))}
           </div>
         ) : conversations.length === 0 ? (
           <p className="p-4 text-center text-sm text-muted-foreground">
-            暂无历史会话
+            暂无外呼记录
+            <span className="mt-1 block text-xs text-muted-foreground/60">
+              点击上方按钮开始新的外呼会话
+            </span>
           </p>
         ) : (
-          <div className="space-y-0.5 pb-4">
+          <div className="space-y-1 pb-4">
             {conversations.map((conv) => (
               <ConversationItem
                 key={conv.id}
                 conversation={conv}
                 isActive={conv.id === activeId}
+                isDeleting={isDeleting}
                 onSelect={onSelect}
+                onDelete={onDelete}
               />
             ))}
           </div>

@@ -1,11 +1,9 @@
 import { db } from "~/server/db";
 
-import { formatBirthday } from "./tools/helpers";
 import type { UserMemory } from "./types";
 
 /**
- * 从数据库加载用户长期记忆（档案 + 基本信息）
- * 注入到 System Instructions，不依赖 OpenAI 短期上下文
+ * 加载当前用户基本信息（不含跨会话保单数据）
  */
 export async function loadUserMemory(userId: string): Promise<UserMemory> {
   const user = await db.user.findUnique({
@@ -14,15 +12,6 @@ export async function loadUserMemory(userId: string): Promise<UserMemory> {
       id: true,
       name: true,
       email: true,
-      profile: {
-        select: {
-          birthday: true,
-          gender: true,
-          phone: true,
-          address: true,
-          notes: true,
-        },
-      },
     },
   });
 
@@ -34,17 +23,7 @@ export async function loadUserMemory(userId: string): Promise<UserMemory> {
     userId: user.id,
     name: user.name,
     email: user.email,
-    profile: user.profile
-      ? {
-          birthday: formatBirthday(user.profile.birthday),
-          gender: user.profile.gender,
-          phone: user.profile.phone,
-          address: user.profile.address,
-          notes: user.profile.notes,
-        }
-      : null,
   };
 }
 
-/** 刷新记忆 — 工具执行后调用，确保下一轮 instructions 是最新档案 */
 export { loadUserMemory as refreshUserMemory };

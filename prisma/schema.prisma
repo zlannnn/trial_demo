@@ -31,7 +31,7 @@ model User {
   id            String    @id @default(cuid())
   email         String    @unique
   name          String?
-  avatar        String?
+  image         String?   @map("avatar")
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
 
@@ -87,13 +87,13 @@ model VerificationToken {
 }
 
 model UserProfile {
-  id       String    @id @default(cuid())
-  userId   String    @unique
-  birthday DateTime? @db.Date
-  gender   Gender?
-  phone    String?
-  address  String?   @db.Text
-  notes    String?   @db.Text
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  birthday  DateTime? @db.Date
+  gender    Gender?
+  phone     String?
+  address   String?   @db.Text
+  notes     String?   @db.Text
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -105,8 +105,19 @@ model Conversation {
   userId    String
   startedAt DateTime @default(now())
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages Message[]
+  policyholderName    String?
+  birthday            DateTime? @db.Date
+  phone               String?
+  insuredName         String?
+  annualPremium       String?
+  paymentYears        String?
+  coverageUntilAge    String?
+  beneficiary         String?
+  contractConfirmedAt DateTime?
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages          Message[]
+  functionCallLogs  FunctionCallLog[]
 
   @@index([userId, startedAt(sort: Desc)])
   @@map("conversations")
@@ -126,17 +137,20 @@ model Message {
 }
 
 model FunctionCallLog {
-  id           String             @id @default(cuid())
-  userId       String
-  functionName String
-  arguments    Json
-  result       Json?
-  status       FunctionCallStatus @default(SUCCESS)
-  createdAt    DateTime           @default(now())
+  id             String             @id @default(cuid())
+  userId         String
+  conversationId String?
+  functionName   String
+  arguments      Json
+  result         Json?
+  status         FunctionCallStatus @default(SUCCESS)
+  createdAt      DateTime           @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt(sort: Desc)])
+  @@index([conversationId, createdAt(sort: Desc)])
   @@index([functionName, createdAt(sort: Desc)])
   @@map("function_call_logs")
 }

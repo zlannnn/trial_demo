@@ -4,7 +4,6 @@ export type { AgentRunInput, AgentRunOutput, AgentSession } from "./agent";
 export { getDeepseek, getOpenaiVoice } from "./client";
 export {
   aiConfig,
-  getEnv,
   isVoiceSttAvailable,
   isVoiceTtsAvailable,
   voicePhaseConfig,

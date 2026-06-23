@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { VoiceApiError, synthesizeAndPlay } from "../lib/voice-api";
+import { api } from "~/trpc/react";
+
 import type {
   StreamProgress,
   TtsRequest,
@@ -13,6 +14,7 @@ import type {
 import { revokeObjectUrl } from "../utils/audio-utils";
 
 export function useVoiceOutput(): UseVoiceOutputReturn {
+  const synthesizeMutation = api.voice.synthesize.useMutation();
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [progress, setProgress] = useState<StreamProgress | null>(null);
   const [error, setError] = useState<VoiceError | null>(null);
@@ -71,17 +73,34 @@ export function useVoiceOutput(): UseVoiceOutputReturn {
 
       try {
         const audio = audioRef.current;
-        if (!audio) throw new VoiceApiError("Audio element not initialized");
+        if (!audio) throw new Error("Audio element not initialized");
 
-        await synthesizeAndPlay(
-          { text, voice: options?.voice, speed: options?.speed },
-          audio,
-          (p) => {
-            if (!controller.signal.aborted) {
-              setProgress(p);
-            }
-          },
+        const result = await synthesizeMutation.mutateAsync({
+          text,
+          voice: options?.voice as
+            | "alloy"
+            | "echo"
+            | "fable"
+            | "onyx"
+            | "nova"
+            | "shimmer"
+            | undefined,
+          speed: options?.speed,
+        });
+
+        if (controller.signal.aborted) return;
+
+        const bytes = Uint8Array.from(atob(result.audioBase64), (c) =>
+          c.charCodeAt(0),
         );
+        setProgress({ bytesReceived: bytes.length });
+
+        revokeObjectUrl(objectUrlRef.current);
+        const blob = new Blob([bytes], { type: result.contentType });
+        const url = URL.createObjectURL(blob);
+        objectUrlRef.current = url;
+        audio.src = url;
+        await audio.play();
 
         if (!controller.signal.aborted) {
           setStatus("speaking");
@@ -90,17 +109,15 @@ export function useVoiceOutput(): UseVoiceOutputReturn {
         if (controller.signal.aborted) return;
 
         const voiceError: VoiceError =
-          err instanceof VoiceApiError
+          err instanceof Error
             ? { code: "TTS_ERROR", message: err.message }
-            : err instanceof Error
-              ? { code: "TTS_ERROR", message: err.message }
-              : { code: "TTS_ERROR", message: "语音合成失败" };
+            : { code: "TTS_ERROR", message: "语音合成失败" };
 
         setError(voiceError);
         setStatus("error");
       }
     },
-    [stop],
+    [stop, synthesizeMutation],
   );
 
   return {

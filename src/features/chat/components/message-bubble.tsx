@@ -1,11 +1,12 @@
 "use client";
 
-import { Bot, User, Wrench } from "lucide-react";
+import { Headphones, User, Wrench } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { cn } from "~/lib/utils";
 
+import { TOOL_LABELS } from "../constants/branding";
 import type { ChatMessage } from "../types";
 import { AudioPlayButton } from "./audio-play-button";
 
@@ -31,27 +32,36 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "group flex gap-3 px-4 py-6 md:px-6",
-        isUser ? "bg-transparent" : "bg-muted/30",
+        "group flex gap-3 px-4 py-5 md:px-6",
+        !isUser && "bg-gradient-to-r from-cyan-500/[0.04] to-transparent",
       )}
     >
-      <Avatar className="h-8 w-8 shrink-0">
+      <Avatar className="h-9 w-9 shrink-0 ring-2 ring-border/50">
         <AvatarFallback
           className={cn(
             "text-xs",
             isUser
-              ? "bg-primary text-primary-foreground"
-              : "bg-emerald-600 text-white",
+              ? "bg-secondary text-secondary-foreground"
+              : "bg-gradient-to-br from-cyan-500/30 to-teal-600/20 text-cyan-300",
           )}
         >
-          {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+          {isUser ? (
+            <User className="h-4 w-4" />
+          ) : (
+            <Headphones className="h-4 w-4" />
+          )}
         </AvatarFallback>
       </Avatar>
 
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">
-            {isUser ? "你" : "AI 助手"}
+          <span
+            className={cn(
+              "text-sm font-medium",
+              !isUser && "text-cyan-300/90",
+            )}
+          >
+            {isUser ? "客户" : "J-Ghost 专员"}
           </span>
           {!isUser && message.content && (
             <AudioPlayButton
@@ -60,14 +70,20 @@ export function MessageBubble({
               disabledReason={voiceUnavailableHint}
               onPlay={() => onPlayAudio?.(message.content)}
               onStop={onStopAudio}
+              className="text-cyan-400/80 hover:text-cyan-300"
             />
           )}
         </div>
 
-        <div className="prose prose-sm max-w-none dark:prose-invert">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-            {message.content}
-          </p>
+        <div
+          className={cn(
+            "rounded-2xl px-4 py-3 text-sm leading-relaxed",
+            isUser
+              ? "bg-secondary/60 text-foreground/90"
+              : "ghost-border bg-card/60 text-foreground/95 backdrop-blur-sm",
+          )}
+        >
+          <p className="whitespace-pre-wrap">{message.content}</p>
         </div>
 
         {message.toolCalls && message.toolCalls.length > 0 && (
@@ -76,10 +92,10 @@ export function MessageBubble({
               <Badge
                 key={tool.callId}
                 variant={tool.success ? "success" : "destructive"}
-                className="gap-1 font-normal"
+                className="gap-1 border-0 bg-cyan-500/10 font-normal text-cyan-200/90"
               >
                 <Wrench className="h-3 w-3" />
-                {formatToolName(tool.name)}
+                {TOOL_LABELS[tool.name] ?? tool.name}
                 {tool.success ? " ✓" : " ✗"}
               </Badge>
             ))}
@@ -88,16 +104,4 @@ export function MessageBubble({
       </div>
     </div>
   );
-}
-
-function formatToolName(name: string): string {
-  const labels: Record<string, string> = {
-    createUserProfile: "创建档案",
-    updateUserProfile: "更新档案",
-    getUserProfile: "读取档案",
-    createConversation: "创建会话",
-    saveMessage: "保存消息",
-    searchConversationHistory: "搜索历史",
-  };
-  return labels[name] ?? name;
 }

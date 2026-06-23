@@ -1,35 +1,59 @@
 import { z } from "zod";
 
-import { db } from "~/server/db";
+import {
+  emptyConversationConfirmation,
+  loadConversationConfirmation,
+} from "~/server/contract/conversation-confirmation";
 
-import { toToolFailure } from "./errors";
-import { defineTool, formatBirthday } from "./helpers";
+import { toToolFailure, ValidationError } from "./errors";
+import { formatConversationPolicyRecord } from "./profile-fields";
+import { defineTool } from "./helpers";
 
 export const getUserProfileParameters = z.object({});
 
 export const getUserProfileTool = defineTool({
   name: "getUserProfile",
   description:
-    "Retrieve the current user's profile including birthday, gender, phone, address, and notes. Use when the user asks about their stored personal information.",
+    "Retrieve contract information saved in the CURRENT outbound call session only. Cannot access data from other calls.",
   parameters: getUserProfileParameters,
   execute: async (ctx) => {
     try {
-      const profile = await db.userProfile.findUnique({
-        where: { userId: ctx.userId },
-        include: {
-          user: {
-            select: { id: true, email: true, name: true, avatar: true },
-          },
-        },
-      });
+      if (!ctx.conversationId) {
+        throw new ValidationError("No active conversation for this call session.");
+      }
 
-      if (!profile) {
+      const confirmation = await loadConversationConfirmation(
+        ctx.conversationId,
+        ctx.userId,
+      );
+
+      if (!confirmation) {
         return {
           success: true,
           data: {
             exists: false,
             profile: null,
-            message: "No profile found for this user.",
+            message: "No policy data saved in this call session yet.",
+          },
+        };
+      }
+
+      const hasAnyField = Object.entries(confirmation).some(
+        ([key, value]) =>
+          key !== "conversationId" &&
+          key !== "contractConfirmedAt" &&
+          value !== null,
+      );
+
+      if (!hasAnyField) {
+        return {
+          success: true,
+          data: {
+            exists: false,
+            profile: formatConversationPolicyRecord(
+              emptyConversationConfirmation(ctx.conversationId),
+            ),
+            message: "No policy data saved in this call session yet.",
           },
         };
       }
@@ -38,16 +62,7 @@ export const getUserProfileTool = defineTool({
         success: true,
         data: {
           exists: true,
-          profile: {
-            id: profile.id,
-            userId: profile.userId,
-            birthday: formatBirthday(profile.birthday),
-            gender: profile.gender,
-            phone: profile.phone,
-            address: profile.address,
-            notes: profile.notes,
-            user: profile.user,
-          },
+          profile: formatConversationPolicyRecord(confirmation),
         },
       };
     } catch (error) {

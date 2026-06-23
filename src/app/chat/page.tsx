@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 
 import { ChatLayout } from "~/features/chat/components/chat-layout";
+import { BRAND } from "~/features/chat/constants/branding";
 
 export const metadata: Metadata = {
-  title: "Chat | AI Voice Assistant",
-  description: "ChatGPT-style AI voice assistant",
+  title: `${BRAND.name} | ${BRAND.scenario}`,
+  description: BRAND.scenarioDesc,
 };
 
 export default function ChatPage() {

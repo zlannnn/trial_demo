@@ -1,6 +1,4 @@
-import { VOICE_API } from "../constants";
-import type { StreamProgress, TranscribeResponse, TtsRequest } from "../types";
-import { playStreamingMp3, readStreamToBlob } from "../utils/audio-utils";
+import type { TranscribeResponse, TtsRequest } from "../types";
 
 export class VoiceApiError extends Error {
   constructor(
@@ -12,93 +10,124 @@ export class VoiceApiError extends Error {
   }
 }
 
-/** 上传录音并调用 Whisper STT */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1];
+      if (!base64) {
+        reject(new VoiceApiError("Failed to encode audio"));
+        return;
+      }
+      resolve(base64);
+    };
+    reader.onerror = () => reject(new VoiceApiError("Failed to read audio blob"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+type TranscribeFn = (input: {
+  audioBase64: string;
+  mimeType?: string;
+  filename?: string;
+}) => Promise<TranscribeResponse>;
+
+type SynthesizeFn = (input: TtsRequest) => Promise<{
+  audioBase64: string;
+  contentType: string;
+}>;
+
+let transcribeFn: TranscribeFn | null = null;
+let synthesizeFn: SynthesizeFn | null = null;
+
+export function registerVoiceTrpcClient(handlers: {
+  transcribe: TranscribeFn;
+  synthesize: SynthesizeFn;
+}) {
+  transcribeFn = handlers.transcribe;
+  synthesizeFn = handlers.synthesize;
+}
+
 export async function transcribeAudioBlob(
   blob: Blob,
   options?: { language?: string; prompt?: string },
 ): Promise<TranscribeResponse> {
-  const formData = new FormData();
+  void options;
+  if (!transcribeFn) {
+    throw new VoiceApiError("Voice client not initialized");
+  }
+
   const ext = blob.type.includes("mp4")
     ? "mp4"
     : blob.type.includes("ogg")
       ? "ogg"
       : "webm";
-  formData.append("audio", blob, `recording.${ext}`);
 
-  const params = new URLSearchParams();
-  if (options?.language) params.set("language", options.language);
-  if (options?.prompt) params.set("prompt", options.prompt);
-
-  const url = params.toString()
-    ? `${VOICE_API.transcribe}?${params}`
-    : VOICE_API.transcribe;
-
-  const response = await fetch(url, {
-    method: "POST",
-    body: formData,
+  return transcribeFn({
+    audioBase64: await blobToBase64(blob),
+    mimeType: blob.type || "audio/webm",
+    filename: `recording.${ext}`,
   });
-
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as {
-      error?: string;
-    };
-    throw new VoiceApiError(
-      body.error ?? `Transcription failed (${response.status})`,
-      response.status,
-    );
-  }
-
-  return response.json() as Promise<TranscribeResponse>;
 }
 
-/** 请求 TTS 流式 mp3 */
 export async function fetchTtsStream(
   request: TtsRequest,
 ): Promise<ReadableStream<Uint8Array>> {
-  const response = await fetch(VOICE_API.tts, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
+  if (!synthesizeFn) {
+    throw new VoiceApiError("Voice client not initialized");
+  }
+
+  const result = await synthesizeFn(request);
+  const bytes = Uint8Array.from(atob(result.audioBase64), (c) =>
+    c.charCodeAt(0),
+  );
+
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
   });
-
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as {
-      error?: string;
-    };
-    throw new VoiceApiError(
-      body.error ?? `TTS failed (${response.status})`,
-      response.status,
-    );
-  }
-
-  const body = response.body;
-  if (!body) {
-    throw new VoiceApiError("TTS response has no stream body");
-  }
-
-  return body;
 }
 
-/** 流式 TTS → 完整 Blob */
 export async function synthesizeToBlob(
   request: TtsRequest,
-  onProgress?: (progress: StreamProgress) => void,
+  onProgress?: (progress: { bytesReceived: number }) => void,
 ): Promise<Blob> {
   const stream = await fetchTtsStream(request);
-  const blob = await readStreamToBlob(stream, (bytesReceived) => {
-    onProgress?.({ bytesReceived });
-  });
-  return blob;
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytesReceived = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      chunks.push(value);
+      bytesReceived += value.length;
+      onProgress?.({ bytesReceived });
+    }
+  }
+
+  const total = chunks.reduce((sum, c) => sum + c.length, 0);
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return new Blob([merged], { type: "audio/mpeg" });
 }
 
-/** 流式 TTS → 边下边播 */
 export async function synthesizeAndPlay(
   request: TtsRequest,
   audio: HTMLAudioElement,
-  onProgress?: (progress: StreamProgress) => void,
+  onProgress?: (progress: { bytesReceived: number }) => void,
 ): Promise<void> {
-  const stream = await fetchTtsStream(request);
-  await playStreamingMp3(stream, audio, (bytesReceived) => {
-    onProgress?.({ bytesReceived });
-  });
+  const blob = await synthesizeToBlob(request, onProgress);
+  const url = URL.createObjectURL(blob);
+  audio.src = url;
+  await audio.play();
 }

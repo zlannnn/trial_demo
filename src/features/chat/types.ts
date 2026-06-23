@@ -37,6 +37,28 @@ export interface SendMessageResponse {
   };
   toolCalls: ToolCallInfo[];
   messages: ChatMessage[];
+  taskProgress?: TaskProgress;
+}
+
+export interface ConfirmationTaskStatus {
+  id: string;
+  label: string;
+  hint: string;
+  required: boolean;
+  completed: boolean;
+  value: string | null;
+}
+
+export interface TaskProgress {
+  conversationId: string | null;
+  tasks: ConfirmationTaskStatus[];
+  completedCount: number;
+  requiredCount: number;
+  totalCount: number;
+  progressPercent: number;
+  allRequiredDone: boolean;
+  finalized: boolean;
+  nextPendingTask: ConfirmationTaskStatus | null;
 }
 
 export interface AppConfig {

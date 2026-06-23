@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-import { getEnv } from "./config";
+import { env } from "~/env";
 
 const globalForLLM = globalThis as unknown as {
   deepseek: OpenAI | undefined;
@@ -9,12 +9,10 @@ const globalForLLM = globalThis as unknown as {
 
 /**
  * DeepSeek 客户端 — Chat Completions + Tool Calling + JSON Output
- * @see https://api-docs.deepseek.com/
  */
 export function getDeepseek(): OpenAI {
   if (globalForLLM.deepseek) return globalForLLM.deepseek;
 
-  const env = getEnv();
   const client = new OpenAI({
     apiKey: env.DEEPSEEK_API_KEY,
     baseURL: env.DEEPSEEK_BASE_URL,
@@ -28,10 +26,9 @@ export function getDeepseek(): OpenAI {
 }
 
 /**
- * OpenAI 客户端 — 仅用于 Whisper STT / TTS（Phase 3 前可选）
+ * OpenAI 客户端 — 仅用于 Whisper STT / TTS
  */
 export function getOpenaiVoice(): OpenAI | null {
-  const env = getEnv();
   if (!env.OPENAI_API_KEY) return null;
 
   if (globalForLLM.openaiVoice) return globalForLLM.openaiVoice;

@@ -13,6 +13,7 @@ import {
   mergeSession,
   persistMessage,
 } from "./context";
+import { loadConversationConfirmation } from "../contract/conversation-confirmation";
 import { loadUserMemory, refreshUserMemory } from "./memory";
 import { buildSystemInstructions } from "./prompts";
 import {
@@ -59,7 +60,11 @@ export class Agent {
     };
 
     let memory = await loadUserMemory(userId);
-    let instructions = buildSystemInstructions(memory);
+    let confirmation = await loadConversationConfirmation(
+      session.conversationId,
+      userId,
+    );
+    let instructions = buildSystemInstructions({ memory, confirmation });
     const tools = getOpenAITools();
 
     const toolCallRecords: AgentToolCallRecord[] = [];
@@ -139,7 +144,11 @@ export class Agent {
 
       if (toolCallRecords.some((t) => t.success && isProfileTool(t.name))) {
         memory = await refreshUserMemory(userId);
-        instructions = buildSystemInstructions(memory);
+        confirmation = await loadConversationConfirmation(
+          session.conversationId,
+          userId,
+        );
+        instructions = buildSystemInstructions({ memory, confirmation });
         messages[0] = { role: "system", content: instructions };
       }
     }
@@ -232,7 +241,8 @@ function isProfileTool(name: string): boolean {
   return (
     name === "createUserProfile" ||
     name === "updateUserProfile" ||
-    name === "getUserProfile"
+    name === "getUserProfile" ||
+    name === "completeContractConfirmation"
   );
 }
 

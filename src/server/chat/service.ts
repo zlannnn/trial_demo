@@ -68,3 +68,23 @@ export async function createConversation(userId: string) {
     messageCount: 0,
   };
 }
+
+export async function deleteConversation(
+  conversationId: string,
+  userId: string,
+): Promise<boolean> {
+  const conversation = await db.conversation.findFirst({
+    where: { id: conversationId, userId },
+    select: { id: true },
+  });
+
+  if (!conversation) return false;
+
+  await db.conversation.delete({ where: { id: conversationId } });
+  return true;
+}
+
+export async function deleteAllConversations(userId: string): Promise<number> {
+  const result = await db.conversation.deleteMany({ where: { userId } });
+  return result.count;
+}

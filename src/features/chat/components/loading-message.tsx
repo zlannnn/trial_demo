@@ -1,6 +1,8 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Database, Loader2 } from "lucide-react";
+
+import { TOOL_LABELS } from "../constants/branding";
 
 interface LoadingMessageProps {
   toolCalls?: { name: string; success?: boolean }[];
@@ -8,18 +10,23 @@ interface LoadingMessageProps {
 
 export function LoadingMessage({ toolCalls }: LoadingMessageProps) {
   return (
-    <div className="flex gap-3 bg-muted/30 px-4 py-6 md:px-6">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
-        <Loader2 className="h-4 w-4 animate-spin" />
+    <div className="flex gap-3 bg-gradient-to-r from-cyan-500/[0.06] to-transparent px-4 py-5 md:px-6">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/30 to-teal-600/20 ghost-border">
+        <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
       </div>
       <div className="space-y-3">
-        <span className="text-sm font-medium text-muted-foreground">
-          AI 正在思考…
-        </span>
+        <div>
+          <span className="text-sm font-medium text-cyan-300/80">
+            J-Ghost 正在处理…
+          </span>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            生成回复 · 必要时联动保单数据库
+          </p>
+        </div>
         <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 animate-pulse-dot rounded-full bg-muted-foreground/60 [animation-delay:0ms]" />
-          <span className="h-2 w-2 animate-pulse-dot rounded-full bg-muted-foreground/60 [animation-delay:200ms]" />
-          <span className="h-2 w-2 animate-pulse-dot rounded-full bg-muted-foreground/60 [animation-delay:400ms]" />
+          <span className="h-2 w-2 animate-pulse-dot rounded-full bg-cyan-400/70 [animation-delay:0ms]" />
+          <span className="h-2 w-2 animate-pulse-dot rounded-full bg-cyan-400/70 [animation-delay:200ms]" />
+          <span className="h-2 w-2 animate-pulse-dot rounded-full bg-cyan-400/70 [animation-delay:400ms]" />
         </div>
         {toolCalls && toolCalls.length > 0 && (
           <ToolCallStatus toolCalls={toolCalls} />
@@ -35,27 +42,26 @@ interface ToolCallStatusProps {
 
 export function ToolCallStatus({ toolCalls }: ToolCallStatusProps) {
   return (
-    <div className="rounded-lg border border-border bg-background/80 p-3">
-      <p className="mb-2 text-xs font-medium text-muted-foreground">
-        工具调用
+    <div className="rounded-xl ghost-border bg-card/50 p-3 backdrop-blur-sm">
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-cyan-400/80">
+        <Database className="h-3 w-3" />
+        业务系统联动
       </p>
       <div className="space-y-1.5">
         {toolCalls.map((tool, i) => (
           <div
             key={`${tool.name}-${i}`}
-            className="flex items-center gap-2 text-xs"
+            className="flex items-center gap-2 text-xs text-muted-foreground"
           >
-            <Loader2 className="h-3 w-3 animate-spin text-amber-500" />
-            <code className="rounded bg-muted px-1.5 py-0.5 font-mono">
-              {tool.name}()
-            </code>
+            <Loader2 className="h-3 w-3 animate-spin text-amber-400" />
+            <span>{TOOL_LABELS[tool.name] ?? tool.name}</span>
             {tool.success !== undefined && (
               <span
                 className={
-                  tool.success ? "text-emerald-600" : "text-destructive"
+                  tool.success ? "text-emerald-400" : "text-destructive"
                 }
               >
-                {tool.success ? "成功" : "失败"}
+                {tool.success ? "完成" : "失败"}
               </span>
             )}
           </div>

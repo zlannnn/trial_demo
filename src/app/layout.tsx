@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 
+import { Providers } from "~/components/providers";
 import "~/styles/globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
 export const metadata: Metadata = {
-  title: "AI Voice Assistant",
-  description: "AI-powered voice assistant with ChatGPT-style interface",
+  title: "J-Ghost | 学资保险契约确认",
+  description:
+    "Jurin J-Ghost 语音 AI 代理 — 学资保险契约确认演示，生成式 AI 与自然语音深度融合",
 };
 
 export default function RootLayout({
@@ -13,8 +21,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN">
-      <body>{children}</body>
+    <html lang="zh-CN" className={inter.variable}>
+      <body className="font-sans">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

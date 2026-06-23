@@ -1,16 +1,16 @@
 import { z } from "zod";
 
-import { db } from "~/server/db";
+import {
+  loadConversationConfirmation,
+  updateConversationConfirmation,
+} from "~/server/contract/conversation-confirmation";
 
-import { ConflictError, toToolFailure } from "./errors";
-import { defineTool, formatBirthday, parseBirthday } from "./helpers";
-
-const genderEnum = z.enum([
-  "MALE",
-  "FEMALE",
-  "OTHER",
-  "PREFER_NOT_TO_SAY",
-]);
+import { toToolFailure, ValidationError } from "./errors";
+import {
+  contractProfileFields,
+  formatConversationPolicyRecord,
+} from "./profile-fields";
+import { defineTool } from "./helpers";
 
 export const createUserProfileParameters = z.object({
   name: z
@@ -18,76 +18,55 @@ export const createUserProfileParameters = z.object({
     .min(1)
     .max(100)
     .optional()
-    .describe("User's display name, e.g. 张三"),
+    .describe("投保人姓名，如 张先生"),
   birthday: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be ISO date format YYYY-MM-DD")
     .optional()
-    .describe("Birthday in YYYY-MM-DD format, e.g. 1998-05-01"),
-  gender: genderEnum
-    .optional()
-    .describe("Gender: MALE, FEMALE, OTHER, or PREFER_NOT_TO_SAY"),
+    .describe("Birthday in YYYY-MM-DD format, e.g. 1990-03-15"),
   phone: z.string().max(20).optional().describe("Phone number"),
-  address: z.string().max(500).optional().describe("Home address"),
-  notes: z.string().max(2000).optional().describe("Additional notes"),
+  ...contractProfileFields,
 });
+
+function toConversationUpdate(args: z.infer<typeof createUserProfileParameters>) {
+  return {
+    ...(args.name !== undefined && { policyholderName: args.name }),
+    ...(args.birthday !== undefined && { birthday: args.birthday }),
+    ...(args.phone !== undefined && { phone: args.phone }),
+    ...(args.insuredName !== undefined && { insuredName: args.insuredName }),
+    ...(args.annualPremium !== undefined && { annualPremium: args.annualPremium }),
+    ...(args.paymentYears !== undefined && { paymentYears: args.paymentYears }),
+    ...(args.coverageUntilAge !== undefined && {
+      coverageUntilAge: args.coverageUntilAge,
+    }),
+    ...(args.beneficiary !== undefined && { beneficiary: args.beneficiary }),
+  };
+}
 
 export const createUserProfileTool = defineTool({
   name: "createUserProfile",
   description:
-    "Create a user profile with personal information such as birthday, gender, phone, address, and notes. Use when the user shares personal details for the first time.",
+    "Save confirmed contract fields for the CURRENT outbound call session only. Each new call starts fresh — do not assume data from past calls.",
   parameters: createUserProfileParameters,
   execute: async (ctx, args) => {
     try {
-      const existing = await db.userProfile.findUnique({
-        where: { userId: ctx.userId },
-      });
-
-      if (existing) {
-        throw new ConflictError(
-          "User profile already exists. Use updateUserProfile instead.",
-        );
+      if (!ctx.conversationId) {
+        throw new ValidationError("No active conversation for this call session.");
       }
 
-      const [profile, user] = await db.$transaction(async (tx) => {
-        if (args.name) {
-          await tx.user.update({
-            where: { id: ctx.userId },
-            data: { name: args.name },
-          });
-        }
+      const confirmation = await updateConversationConfirmation(
+        ctx.conversationId,
+        ctx.userId,
+        toConversationUpdate(args),
+      );
 
-        const createdProfile = await tx.userProfile.create({
-          data: {
-            userId: ctx.userId,
-            birthday: args.birthday ? parseBirthday(args.birthday) : undefined,
-            gender: args.gender,
-            phone: args.phone,
-            address: args.address,
-            notes: args.notes,
-          },
-        });
-
-        const updatedUser = await tx.user.findUniqueOrThrow({
-          where: { id: ctx.userId },
-          select: { id: true, name: true, email: true },
-        });
-
-        return [createdProfile, updatedUser] as const;
-      });
+      if (!confirmation) {
+        throw new ValidationError("Conversation not found for this call session.");
+      }
 
       return {
         success: true,
-        data: {
-          id: profile.id,
-          userId: profile.userId,
-          name: user.name,
-          birthday: formatBirthday(profile.birthday),
-          gender: profile.gender,
-          phone: profile.phone,
-          address: profile.address,
-          notes: profile.notes,
-        },
+        data: formatConversationPolicyRecord(confirmation),
       };
     } catch (error) {
       return toToolFailure(error);

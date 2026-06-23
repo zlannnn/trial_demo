@@ -1,16 +1,11 @@
 "use client";
 
-import { Menu, MessageSquarePlus } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
-import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "~/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
 
+import { BRAND } from "../constants/branding";
 import type { ConversationSummary } from "../types";
 import { ConversationList } from "./conversation-list";
 
@@ -18,49 +13,72 @@ interface ChatSidebarProps {
   conversations: ConversationSummary[];
   activeId?: string;
   isLoading?: boolean;
+  isDeleting?: boolean;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   onSelect: (id: string) => void;
   onNewChat: () => void;
+  onDelete: (id: string) => void;
+  onDeleteAll: () => void;
+}
+
+function SidebarBrand() {
+  return (
+    <div className="flex items-center gap-3 px-4 py-4">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/25 to-teal-600/15 ghost-border">
+        <Sparkles className="h-4 w-4 text-cyan-400" />
+      </div>
+      <div>
+        <h1 className="text-base font-bold tracking-tight text-gradient-ghost">
+          {BRAND.name}
+        </h1>
+        <p className="text-[10px] text-muted-foreground">{BRAND.scenario}</p>
+      </div>
+    </div>
+  );
 }
 
 export function ChatSidebar({
   conversations,
   activeId,
   isLoading,
+  isDeleting,
   isOpen,
   onOpenChange,
   onSelect,
   onNewChat,
+  onDelete,
+  onDeleteAll,
 }: ChatSidebarProps) {
   const sidebarContent = (
     <ConversationList
       conversations={conversations}
       activeId={activeId}
       isLoading={isLoading}
+      isDeleting={isDeleting}
       onSelect={onSelect}
       onNewChat={onNewChat}
+      onDelete={onDelete}
+      onDeleteAll={onDeleteAll}
     />
   );
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden h-full w-64 shrink-0 flex-col border-r bg-sidebar md:flex lg:w-72">
-        <div className="flex h-14 items-center px-4">
-          <h1 className="text-lg font-semibold">AI 助手</h1>
-        </div>
-        <Separator />
+      <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-border/60 bg-sidebar/80 backdrop-blur-xl md:flex lg:w-72">
+        <SidebarBrand />
+        <Separator className="bg-border/60" />
         {sidebarContent}
       </aside>
 
-      {/* Mobile sidebar sheet */}
       <Sheet open={isOpen} onOpenChange={onOpenChange}>
-        <SheetContent side="left" className="w-72 p-0">
-          <SheetTitle className="flex h-14 items-center px-4 text-lg font-semibold">
-            AI 助手
-          </SheetTitle>
-          <Separator />
+        <SheetContent
+          side="left"
+          className="w-72 border-border/60 bg-sidebar p-0"
+        >
+          <SheetTitle className="sr-only">{BRAND.name}</SheetTitle>
+          <SidebarBrand />
+          <Separator className="bg-border/60" />
           {sidebarContent}
         </SheetContent>
       </Sheet>
@@ -68,26 +86,4 @@ export function ChatSidebar({
   );
 }
 
-interface MobileHeaderProps {
-  onMenuClick: () => void;
-  onNewChat: () => void;
-}
-
-export function MobileHeader({ onMenuClick, onNewChat }: MobileHeaderProps) {
-  return (
-    <header className="flex h-14 items-center justify-between border-b px-4 md:hidden">
-      <Button variant="ghost" size="icon" onClick={onMenuClick}>
-        <Menu className="h-5 w-5" />
-        <span className="sr-only">打开菜单</span>
-      </Button>
-      <span className="font-semibold">AI 助手</span>
-      <Button variant="ghost" size="icon" onClick={onNewChat}>
-        <MessageSquarePlus className="h-5 w-5" />
-        <span className="sr-only">新对话</span>
-      </Button>
-    </header>
-  );
-}
-
-// Re-export SheetTrigger for mobile menu button in layout
-export { SheetTrigger };
+export { MobileHeaderBar } from "./chat-header";

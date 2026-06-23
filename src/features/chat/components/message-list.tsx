@@ -7,6 +7,7 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import type { ChatMessage } from "../types";
 import { LoadingMessage } from "./loading-message";
 import { MessageBubble } from "./message-bubble";
+import { WelcomePanel } from "./welcome-panel";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -17,6 +18,8 @@ interface MessageListProps {
   isSpeaking?: boolean;
   voiceTtsAvailable?: boolean;
   voiceUnavailableHint?: string;
+  onQuickPrompt?: (text: string) => void;
+  voiceSttAvailable?: boolean;
 }
 
 export function MessageList({
@@ -28,6 +31,8 @@ export function MessageList({
   isSpeaking,
   voiceTtsAvailable,
   voiceUnavailableHint,
+  onQuickPrompt,
+  voiceSttAvailable,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -35,19 +40,12 @@ export function MessageList({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, activeToolCalls]);
 
-  if (messages.length === 0 && !isLoading) {
+  if (messages.length === 0 && !isLoading && onQuickPrompt) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-          <span className="text-3xl">💬</span>
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold">有什么可以帮你的？</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            输入文字或点击麦克风开始语音对话
-          </p>
-        </div>
-      </div>
+      <WelcomePanel
+        onQuickPrompt={onQuickPrompt}
+        voiceSttAvailable={voiceSttAvailable}
+      />
     );
   }
 

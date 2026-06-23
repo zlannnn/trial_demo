@@ -34,13 +34,6 @@ export interface UserMemory {
   userId: string;
   name: string | null;
   email: string;
-  profile: {
-    birthday: string | null;
-    gender: string | null;
-    phone: string | null;
-    address: string | null;
-    notes: string | null;
-  } | null;
 }
 
 export interface ConversationMessage {

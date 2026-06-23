@@ -50,6 +50,7 @@ export async function executeToolCall(
     if (persistLog) {
       await persistFunctionCallLog({
         userId: ctx.userId,
+        conversationId: ctx.conversationId,
         functionName: toolName,
         arguments: { raw: toolCall.function.arguments },
         result: failure,
@@ -71,6 +72,7 @@ export async function executeToolCall(
     if (persistLog) {
       await persistFunctionCallLog({
         userId: ctx.userId,
+        conversationId: ctx.conversationId,
         functionName: toolName,
         arguments: { raw: toolCall.function.arguments },
         result,
@@ -94,6 +96,7 @@ export async function executeToolCall(
     if (persistLog) {
       await persistFunctionCallLog({
         userId: ctx.userId,
+        conversationId: ctx.conversationId,
         functionName: toolName,
         arguments: parsedArgs as Record<string, unknown>,
         result,
@@ -115,6 +118,7 @@ export async function executeToolCall(
   if (persistLog) {
     await persistFunctionCallLog({
       userId: ctx.userId,
+      conversationId: ctx.conversationId,
       functionName: toolName,
       arguments: validation.data as Record<string, unknown>,
       result,
@@ -155,6 +159,7 @@ function buildOutput(
 
 async function persistFunctionCallLog(params: {
   userId: string;
+  conversationId?: string;
   functionName: string;
   arguments: Record<string, unknown>;
   result: ToolResult;
@@ -164,6 +169,7 @@ async function persistFunctionCallLog(params: {
     await db.functionCallLog.create({
       data: {
         userId: params.userId,
+        conversationId: params.conversationId,
         functionName: params.functionName,
         arguments: params.arguments as Prisma.InputJsonValue,
         result: params.result as unknown as Prisma.InputJsonValue,
@@ -171,7 +177,6 @@ async function persistFunctionCallLog(params: {
       },
     });
   } catch (error) {
-    // 日志写入失败不应阻断主流程
     console.error("[ToolExecutor] Failed to persist FunctionCallLog:", error);
   }
 }

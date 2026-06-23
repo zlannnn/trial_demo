@@ -1,5 +1,7 @@
 export { ChatLayout } from "./components/chat-layout";
-export { ChatSidebar, MobileHeader } from "./components/chat-sidebar";
+export { ChatSidebar, MobileHeaderBar } from "./components/chat-sidebar";
+export { ChatHeader } from "./components/chat-header";
+export { WelcomePanel, QuickPromptBar } from "./components/welcome-panel";
 export { ChatComposer } from "./components/chat-composer";
 export { MessageList } from "./components/message-list";
 export { MessageBubble } from "./components/message-bubble";
