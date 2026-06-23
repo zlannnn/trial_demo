@@ -1,5 +1,5 @@
 import { isVoiceSttAvailable } from "~/server/ai/config";
-import { openaiVoice } from "~/server/ai/client";
+import { getOpenaiVoice } from "~/server/ai/client";
 
 import { voiceConfig } from "./config";
 
@@ -19,6 +19,7 @@ export async function transcribeAudio(
   filename: string,
   options: TranscribeOptions = {},
 ): Promise<TranscribeResult> {
+  const openaiVoice = getOpenaiVoice();
   if (!isVoiceSttAvailable() || !openaiVoice) {
     throw new Error(
       "Voice STT is disabled. Set VOICE_STT_ENABLED=true and OPENAI_API_KEY.",

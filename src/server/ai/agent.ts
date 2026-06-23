@@ -4,7 +4,7 @@ import type {
   ChatCompletionMessageToolCall,
 } from "openai/resources/chat/completions";
 
-import { deepseek } from "./client";
+import { getDeepseek } from "./client";
 import { aiConfig } from "./config";
 import {
   buildChatMessages,
@@ -78,7 +78,7 @@ export class Agent {
     let hadToolCalls = false;
 
     for (let i = 0; i < aiConfig.maxToolIterations; i++) {
-      const response = await deepseek.chat.completions.create({
+      const response = await getDeepseek().chat.completions.create({
         model: aiConfig.model,
         messages,
         tools,
@@ -173,7 +173,7 @@ export class Agent {
   private async synthesizeStructuredReply(
     messages: ChatCompletionMessageParam[],
   ) {
-    const response = await deepseek.chat.completions.create({
+    const response = await getDeepseek().chat.completions.create({
       model: aiConfig.model,
       messages: [
         ...messages,

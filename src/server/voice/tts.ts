@@ -1,5 +1,5 @@
 import { isVoiceTtsAvailable } from "~/server/ai/config";
-import { openaiVoice } from "~/server/ai/client";
+import { getOpenaiVoice } from "~/server/ai/client";
 
 import { voiceConfig, type TtsVoice } from "./config";
 
@@ -13,6 +13,7 @@ export async function synthesizeSpeechStream(
   text: string,
   options: TtsOptions = {},
 ): Promise<ReadableStream<Uint8Array>> {
+  const openaiVoice = getOpenaiVoice();
   if (!isVoiceTtsAvailable() || !openaiVoice) {
     throw new Error(
       "Voice TTS is disabled. Set VOICE_TTS_ENABLED=true and OPENAI_API_KEY.",

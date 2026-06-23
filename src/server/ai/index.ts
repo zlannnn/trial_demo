@@ -1,10 +1,10 @@
 export { Agent, agent } from "./agent";
 export type { AgentRunInput, AgentRunOutput, AgentSession } from "./agent";
 
-export { deepseek, openai, openaiVoice } from "./client";
+export { getDeepseek, getOpenaiVoice } from "./client";
 export {
   aiConfig,
-  env,
+  getEnv,
   isVoiceSttAvailable,
   isVoiceTtsAvailable,
   voicePhaseConfig,

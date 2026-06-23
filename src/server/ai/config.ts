@@ -23,7 +23,14 @@ const envSchema = z.object({
     .default("true"),
 });
 
-function createEnv() {
+type Env = z.infer<typeof envSchema>;
+
+let cachedEnv: Env | undefined;
+
+/** 延迟校验，避免 next build 收集页面数据时因缺少 env 而失败 */
+export function getEnv(): Env {
+  if (cachedEnv) return cachedEnv;
+
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
@@ -33,16 +40,19 @@ function createEnv() {
     throw new Error(`Invalid environment variables:\n${message}`);
   }
 
-  return parsed.data;
+  cachedEnv = parsed.data;
+  return cachedEnv;
 }
-
-export const env = createEnv();
 
 export const aiConfig = {
   /** DeepSeek v4 flash — Chat Completions */
   provider: "deepseek" as const,
-  model: env.DEEPSEEK_MODEL,
-  baseURL: env.DEEPSEEK_BASE_URL,
+  get model() {
+    return getEnv().DEEPSEEK_MODEL;
+  },
+  get baseURL() {
+    return getEnv().DEEPSEEK_BASE_URL;
+  },
   /** Agent 工具调用最大循环次数 */
   maxToolIterations: 10,
   /** 从 DB 加载的历史消息条数上限 */
@@ -51,19 +61,25 @@ export const aiConfig = {
   structuredOutput: true,
   /** 非 thinking 模式默认 temperature */
   temperature: 0.7,
-} as const;
+};
 
 export const voicePhaseConfig = {
-  sttEnabled: env.VOICE_STT_ENABLED,
-  ttsEnabled: env.VOICE_TTS_ENABLED,
+  get sttEnabled() {
+    return getEnv().VOICE_STT_ENABLED;
+  },
+  get ttsEnabled() {
+    return getEnv().VOICE_TTS_ENABLED;
+  },
   /** Phase 3 实时语音 Agent — 尚未接入 */
   realtimeEnabled: false,
-} as const;
+};
 
 export function isVoiceSttAvailable(): boolean {
+  const env = getEnv();
   return voicePhaseConfig.sttEnabled && !!env.OPENAI_API_KEY;
 }
 
 export function isVoiceTtsAvailable(): boolean {
+  const env = getEnv();
   return voicePhaseConfig.ttsEnabled && !!env.OPENAI_API_KEY;
 }
