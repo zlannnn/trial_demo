@@ -55,9 +55,9 @@ export const env = createEnv({
 });
 
 export function getAuthSecret() {
-  return env.AUTH_SECRET ?? "dev-only-auth-secret-do-not-use-in-production";
+  return (
+    process.env.AUTH_SECRET ?? "dev-only-auth-secret-do-not-use-in-production"
+  );
 }
 
-export function isGoogleAuthConfigured() {
-  return !!(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET);
-}
+export { isGoogleAuthConfigured } from "~/server/auth/shared";

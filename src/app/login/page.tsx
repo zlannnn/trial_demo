@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { GoogleSignInButton } from "~/components/auth-buttons";
-import { isGoogleAuthConfigured } from "~/env";
+import { isGoogleAuthConfigured } from "~/server/auth/shared";
 
 export default function LoginPage() {
   const googleReady = isGoogleAuthConfigured();
@@ -18,18 +18,28 @@ export default function LoginPage() {
         {googleReady ? (
           <GoogleSignInButton />
         ) : (
-          <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-            请在 <code className="text-xs">.env.local</code> 中配置{" "}
-            <code className="text-xs">AUTH_GOOGLE_ID</code> 和{" "}
-            <code className="text-xs">AUTH_GOOGLE_SECRET</code>
-            ，然后重启开发服务器。
+          <div className="space-y-3">
+            <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+              Google 登录尚未配置。请在 <code className="text-xs">.env.local</code>{" "}
+              中填写真实的 <code className="text-xs">AUTH_GOOGLE_ID</code> 和{" "}
+              <code className="text-xs">AUTH_GOOGLE_SECRET</code>，然后重启开发服务器。
+            </p>
+            <p className="text-center text-xs text-muted-foreground">
+              本地演示可先使用{" "}
+              <Link href="/admin/login" className="text-primary hover:underline">
+                管理员入口
+              </Link>
+              （账号/密码均为 admin）
+            </p>
+          </div>
+        )}
+        {googleReady && (
+          <p className="text-center text-xs text-muted-foreground">
+            <Link href="/admin/login" className="text-primary hover:underline">
+              管理员入口
+            </Link>
           </p>
         )}
-        <p className="text-center text-xs text-muted-foreground">
-          <Link href="/admin/login" className="text-primary hover:underline">
-            管理员入口
-          </Link>
-        </p>
       </div>
     </div>
   );

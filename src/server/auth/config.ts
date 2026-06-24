@@ -2,10 +2,13 @@ import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
-import { env } from "~/env";
-
-export const ADMIN_USER_ID = "admin-system";
-export const ADMIN_CREDENTIALS = { username: "admin", password: "admin" };
+import {
+  ADMIN_CREDENTIALS,
+  ADMIN_USER_ID,
+  authCallbacks,
+  authPages,
+  isGoogleAuthConfigured,
+} from "./shared";
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
@@ -27,11 +30,13 @@ declare module "@auth/core/jwt" {
   }
 }
 
-/** 始终注册 Google provider，避免 OAuth 回调时 providers 为空 */
-export const googleProvider = Google({
-  clientId: env.AUTH_GOOGLE_ID ?? "",
-  clientSecret: env.AUTH_GOOGLE_SECRET ?? "",
-});
+/** 仅在配置了有效 Google OAuth 凭证时注册 */
+export const googleProvider = isGoogleAuthConfigured()
+  ? Google({
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    })
+  : null;
 
 export const credentialsProvider = Credentials({
   id: "admin-credentials",
@@ -57,40 +62,16 @@ export const credentialsProvider = Credentials({
 });
 
 export const authConfig = {
-  providers: [googleProvider, credentialsProvider],
-  pages: {
-    signIn: "/login",
-  },
-  callbacks: {
-    jwt({ token, user }) {
-      if (user?.id) {
-        token.id = user.id;
-      }
-      if (user?.role) {
-        token.role = user.role;
-      } else if (!token.role) {
-        token.role = "user";
-      }
-      return token;
-    },
-    session({ session, token }) {
-      return {
-        ...session,
-        user: {
-          ...session.user,
-          id: token.id as string,
-          role: (token.role as "admin" | "user") ?? "user",
-        },
-      };
-    },
-    redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (url.startsWith(baseUrl)) return url;
-      return `${baseUrl}/chat`;
-    },
-  },
+  providers: [
+    ...(googleProvider ? [googleProvider] : []),
+    credentialsProvider,
+  ],
+  pages: authPages,
+  callbacks: authCallbacks,
   session: {
     strategy: "jwt",
   },
   trustHost: true,
 } satisfies NextAuthConfig;
+
+export { ADMIN_USER_ID, ADMIN_CREDENTIALS } from "./shared";

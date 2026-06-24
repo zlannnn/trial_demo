@@ -1,14 +1,16 @@
 import NextAuth from "next-auth";
 
-import { getAuthSecret } from "~/env";
-import { authConfig, googleProvider } from "~/server/auth/config";
+import {
+  authCallbacks,
+  authPages,
+  getAuthSecretFromEnv,
+} from "~/server/auth/shared";
 
 export default NextAuth({
-  ...authConfig,
-  providers: [googleProvider],
-  secret: getAuthSecret(),
+  providers: [],
+  secret: getAuthSecretFromEnv(),
   callbacks: {
-    ...authConfig.callbacks,
+    ...authCallbacks,
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
       const role = auth?.user?.role ?? "user";
@@ -50,9 +52,11 @@ export default NextAuth({
       return true;
     },
   },
-  pages: {
-    signIn: "/login",
+  pages: authPages,
+  session: {
+    strategy: "jwt",
   },
+  trustHost: true,
 }).auth;
 
 export const config = {
