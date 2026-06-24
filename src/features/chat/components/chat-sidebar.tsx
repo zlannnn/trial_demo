@@ -25,8 +25,8 @@ interface ChatSidebarProps {
 function SidebarBrand() {
   return (
     <div className="flex items-center gap-3 px-4 py-4">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/25 to-teal-600/15 ghost-border">
-        <Sparkles className="h-4 w-4 text-cyan-400" />
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-teal-500/10 ghost-border">
+        <Sparkles className="h-4 w-4 text-primary" />
       </div>
       <div>
         <h1 className="text-base font-bold tracking-tight text-gradient-ghost">

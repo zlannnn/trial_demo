@@ -15,6 +15,7 @@ import {
 import { cn } from "~/lib/utils";
 
 import type { ConversationSummary } from "../types";
+import { FieldStatusBadges } from "./field-status-badges";
 
 interface ConversationItemProps {
   conversation: ConversationSummary;
@@ -53,9 +54,9 @@ export function ConversationItem({
     <div
       className={cn(
         "group relative flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all",
-        "hover:bg-cyan-500/5 hover:border-cyan-500/20 border-transparent",
-        isActive && "bg-cyan-500/10 border-cyan-500/25 ghost-glow",
-        confirming && "border-red-500/30 bg-red-500/5",
+        "hover:bg-primary/5 hover:border-primary/20 border-transparent",
+        isActive && "bg-primary/10 border-primary/25 ghost-glow",
+        confirming && "border-destructive/30 bg-destructive/5",
       )}
     >
       <button
@@ -67,7 +68,7 @@ export function ConversationItem({
         <PhoneCall
           className={cn(
             "mt-0.5 h-4 w-4 shrink-0",
-            isActive ? "text-cyan-400" : "text-muted-foreground",
+            isActive ? "text-primary" : "text-muted-foreground",
           )}
         />
         <div className="min-w-0 flex-1">
@@ -76,8 +77,14 @@ export function ConversationItem({
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {formatRelativeTime(conversation.startedAt)} ·{" "}
-            {conversation.messageCount} 轮对话
+            {conversation.messageCount} 轮对话 ·{" "}
+            {conversation.fields.completedCount}/{conversation.fields.totalCount}
           </p>
+          <FieldStatusBadges
+            tasks={conversation.fields.tasks}
+            compact
+            className="mt-2"
+          />
         </div>
       </button>
 
@@ -172,7 +179,7 @@ export function ConversationList({
         <Button
           onClick={onNewChat}
           disabled={isDeleting}
-          className="w-full justify-start gap-2 bg-cyan-600/90 text-primary-foreground hover:bg-cyan-500 shadow-lg shadow-cyan-500/10"
+          className="w-full justify-start gap-2 shadow-sm"
         >
           <Plus className="h-4 w-4" />
           新建外呼会话

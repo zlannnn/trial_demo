@@ -33,7 +33,7 @@ export function MessageBubble({
     <div
       className={cn(
         "group flex gap-3 px-4 py-5 md:px-6",
-        !isUser && "bg-gradient-to-r from-cyan-500/[0.04] to-transparent",
+        !isUser && "bg-gradient-to-r from-primary/[0.04] to-transparent",
       )}
     >
       <Avatar className="h-9 w-9 shrink-0 ring-2 ring-border/50">
@@ -42,7 +42,7 @@ export function MessageBubble({
             "text-xs",
             isUser
               ? "bg-secondary text-secondary-foreground"
-              : "bg-gradient-to-br from-cyan-500/30 to-teal-600/20 text-cyan-300",
+              : "bg-gradient-to-br from-primary/15 to-teal-500/10 text-primary",
           )}
         >
           {isUser ? (
@@ -58,7 +58,7 @@ export function MessageBubble({
           <span
             className={cn(
               "text-sm font-medium",
-              !isUser && "text-cyan-300/90",
+              !isUser && "text-primary",
             )}
           >
             {isUser ? "客户" : "J-Ghost 专员"}
@@ -70,7 +70,7 @@ export function MessageBubble({
               disabledReason={voiceUnavailableHint}
               onPlay={() => onPlayAudio?.(message.content)}
               onStop={onStopAudio}
-              className="text-cyan-400/80 hover:text-cyan-300"
+              className="text-primary/80 hover:text-primary"
             />
           )}
         </div>
@@ -92,7 +92,7 @@ export function MessageBubble({
               <Badge
                 key={tool.callId}
                 variant={tool.success ? "success" : "destructive"}
-                className="gap-1 border-0 bg-cyan-500/10 font-normal text-cyan-200/90"
+                className="gap-1 border-0 bg-primary/10 font-normal text-primary"
               >
                 <Wrench className="h-3 w-3" />
                 {TOOL_LABELS[tool.name] ?? tool.name}

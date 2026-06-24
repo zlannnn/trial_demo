@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { GoogleSignInButton } from "~/components/auth-buttons";
 import { isGoogleAuthConfigured } from "~/env";
 
@@ -16,13 +18,18 @@ export default function LoginPage() {
         {googleReady ? (
           <GoogleSignInButton />
         ) : (
-          <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+          <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
             请在 <code className="text-xs">.env.local</code> 中配置{" "}
             <code className="text-xs">AUTH_GOOGLE_ID</code> 和{" "}
             <code className="text-xs">AUTH_GOOGLE_SECRET</code>
             ，然后重启开发服务器。
           </p>
         )}
+        <p className="text-center text-xs text-muted-foreground">
+          <Link href="/admin/login" className="text-primary hover:underline">
+            管理员入口
+          </Link>
+        </p>
       </div>
     </div>
   );

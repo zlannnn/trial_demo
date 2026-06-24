@@ -32,7 +32,7 @@ export function emptyConversationConfirmation(
   };
 }
 
-function mapConversationRecord(
+export function mapConversationRecord(
   conversation: {
     id: string;
     policyholderName: string | null;
@@ -60,24 +60,38 @@ function mapConversationRecord(
   };
 }
 
+const confirmationSelect = {
+  id: true,
+  policyholderName: true,
+  birthday: true,
+  phone: true,
+  insuredName: true,
+  annualPremium: true,
+  paymentYears: true,
+  coverageUntilAge: true,
+  beneficiary: true,
+  contractConfirmedAt: true,
+} as const;
+
 export async function loadConversationConfirmation(
   conversationId: string,
   userId: string,
 ): Promise<ConversationConfirmation | null> {
   const conversation = await db.conversation.findFirst({
     where: { id: conversationId, userId },
-    select: {
-      id: true,
-      policyholderName: true,
-      birthday: true,
-      phone: true,
-      insuredName: true,
-      annualPremium: true,
-      paymentYears: true,
-      coverageUntilAge: true,
-      beneficiary: true,
-      contractConfirmedAt: true,
-    },
+    select: confirmationSelect,
+  });
+
+  if (!conversation) return null;
+  return mapConversationRecord(conversation);
+}
+
+export async function loadConversationConfirmationById(
+  conversationId: string,
+): Promise<ConversationConfirmation | null> {
+  const conversation = await db.conversation.findFirst({
+    where: { id: conversationId },
+    select: confirmationSelect,
   });
 
   if (!conversation) return null;

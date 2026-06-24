@@ -15,11 +15,20 @@ export interface ToolCallInfo {
   result?: unknown;
 }
 
+export interface ConversationSummaryFields {
+  tasks: ConfirmationTaskStatus[];
+  completedCount: number;
+  totalCount: number;
+  progressPercent: number;
+  finalized: boolean;
+}
+
 export interface ConversationSummary {
   id: string;
   startedAt: string;
   preview: string;
   messageCount: number;
+  fields: ConversationSummaryFields;
 }
 
 export interface ChatSession {

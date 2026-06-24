@@ -32,6 +32,26 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.session?.user?.id) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
+  if (ctx.session.user.role === "admin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "管理员账号请使用管理后台",
+    });
+  }
+  return next({
+    ctx: {
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});
+
+export const adminProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.session?.user?.id) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  if (ctx.session.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "需要管理员权限" });
+  }
   return next({
     ctx: {
       session: { ...ctx.session, user: ctx.session.user },

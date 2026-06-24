@@ -52,13 +52,13 @@ export function TaskChecklistPanel({
           className="flex w-full items-center justify-between px-4 py-3"
         >
           <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-4 w-4 text-cyan-400" />
+            <ClipboardCheck className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">契约确认任务</span>
             <Badge
               variant="outline"
               className={cn(
                 "border-cyan-500/30 text-[10px]",
-                finalized && "border-emerald-500/30 text-emerald-400",
+                finalized && "border-emerald-300 text-emerald-700",
               )}
             >
               {completedCount}/{totalCount}
@@ -129,28 +129,28 @@ function TaskPanelBody({
             className={cn(
               "h-full rounded-full transition-all duration-500",
               finalized
-                ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
-                : "bg-gradient-to-r from-cyan-500 to-teal-400",
+                ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                : "bg-gradient-to-r from-primary to-teal-500",
             )}
             style={{ width: `${progressPercent}%` }}
           />
         </div>
 
         {finalized ? (
-          <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
-            <PartyPopper className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+            <PartyPopper className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
             <div>
-              <p className="text-xs font-medium text-emerald-300">
+              <p className="text-xs font-medium text-emerald-700">
                 契约确认已完成
               </p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-emerald-200/70">
+              <p className="mt-0.5 text-[11px] leading-relaxed text-emerald-600/80">
                 全部信息已入库，客户可以结束通话
               </p>
             </div>
           </div>
         ) : nextPendingTask ? (
-          <div className="mt-3 rounded-xl ghost-border bg-cyan-500/5 p-3">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-cyan-400/80">
+          <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-primary/80">
               当前推进
             </p>
             <p className="mt-1 text-xs font-medium text-foreground/90">
@@ -175,9 +175,12 @@ function TaskPanelBody({
               <li
                 key={task.id}
                 className={cn(
-                  "flex items-start gap-2.5 rounded-xl px-3 py-2.5 transition-colors",
-                  task.completed && "opacity-80",
-                  isCurrent && "bg-cyan-500/10 ghost-border",
+                  "flex items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors",
+                  task.completed
+                    ? "field-obtained"
+                    : isCurrent
+                      ? "border-primary/30 bg-primary/5"
+                      : "field-missing",
                 )}
               >
                 <TaskIcon
@@ -191,31 +194,31 @@ function TaskPanelBody({
                       className={cn(
                         "text-xs font-medium",
                         task.completed
-                          ? "text-emerald-400/90 line-through decoration-emerald-500/40"
+                          ? "text-emerald-700"
                           : isCurrent
-                            ? "text-cyan-200"
-                            : "text-foreground/80",
+                            ? "text-primary"
+                            : "text-red-600",
                       )}
                     >
                       {task.label}
                     </p>
                     {isCurrent && isLoading && (
-                      <Loader2 className="h-3 w-3 animate-spin text-cyan-400" />
+                      <Loader2 className="h-3 w-3 animate-spin text-primary" />
                     )}
                   </div>
                   {task.completed && task.value && task.id !== "finalize" && (
-                    <p className="mt-0.5 truncate text-[10px] text-emerald-300/60">
+                    <p className="mt-0.5 truncate text-[10px] text-emerald-600">
                       {task.value}
                     </p>
                   )}
                   {task.id === "finalize" && task.completed && (
-                    <p className="mt-0.5 text-[10px] text-emerald-300/60">
+                    <p className="mt-0.5 text-[10px] text-emerald-600">
                       已正式入库
                     </p>
                   )}
-                  {!task.completed && isCurrent && (
-                    <p className="mt-0.5 text-[10px] text-muted-foreground/70">
-                      {task.hint}
+                  {!task.completed && (
+                    <p className="mt-0.5 text-[10px] opacity-80">
+                      {isCurrent ? task.hint : "未获取"}
                     </p>
                   )}
                 </div>
@@ -231,8 +234,8 @@ function TaskPanelBody({
 function PanelHeader() {
   return (
     <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
-      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500/10">
-        <ClipboardCheck className="h-3.5 w-3.5 text-cyan-400" />
+      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+        <ClipboardCheck className="h-3.5 w-3.5 text-primary" />
       </div>
       <div>
         <p className="text-sm font-semibold">本次外呼任务</p>
@@ -289,14 +292,14 @@ function ProgressRing({
           strokeDashoffset={offset}
           className={cn(
             "transition-all duration-500",
-            finalized ? "text-emerald-400" : "text-cyan-400",
+            finalized ? "text-emerald-600" : "text-primary",
           )}
         />
       </svg>
       <span
         className={cn(
           "absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums",
-          finalized ? "text-emerald-400" : "text-cyan-300",
+          finalized ? "text-emerald-600" : "text-primary",
         )}
       >
         {percent}%
@@ -319,7 +322,7 @@ function TaskIcon({
       <CheckCircle2
         className={cn(
           "mt-0.5 h-4 w-4 shrink-0",
-          isFinalize ? "text-emerald-400" : "text-emerald-400/90",
+          isFinalize ? "text-emerald-600" : "text-emerald-600",
         )}
       />
     );
@@ -328,7 +331,7 @@ function TaskIcon({
   if (isCurrent) {
     return (
       <div className="relative mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
-        <Sparkles className="h-4 w-4 text-cyan-400" />
+        <Sparkles className="h-4 w-4 text-primary" />
       </div>
     );
   }

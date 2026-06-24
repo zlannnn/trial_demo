@@ -1,28 +1,123 @@
 import { db } from "~/server/db";
+import {
+  type ConversationConfirmation,
+  mapConversationRecord,
+} from "~/server/contract/conversation-confirmation";
+import { computeTaskProgress, type ConfirmationTaskStatus } from "~/server/contract/tasks";
+
+export interface ConversationSummaryFields {
+  tasks: ConfirmationTaskStatus[];
+  completedCount: number;
+  totalCount: number;
+  progressPercent: number;
+  finalized: boolean;
+}
+
+export interface ConversationSummary {
+  id: string;
+  startedAt: string;
+  preview: string;
+  messageCount: number;
+  fields: ConversationSummaryFields;
+}
+
+export interface AdminConversationSummary extends ConversationSummary {
+  userId: string;
+  userEmail: string;
+  userName: string | null;
+}
+
+const conversationSelect = {
+  id: true,
+  startedAt: true,
+  userId: true,
+  policyholderName: true,
+  birthday: true,
+  phone: true,
+  insuredName: true,
+  annualPremium: true,
+  paymentYears: true,
+  coverageUntilAge: true,
+  beneficiary: true,
+  contractConfirmedAt: true,
+} as const;
+
+function buildSummaryFields(
+  confirmation: ConversationConfirmation,
+): ConversationSummaryFields {
+  const progress = computeTaskProgress(confirmation);
+  return {
+    tasks: progress.tasks,
+    completedCount: progress.completedCount,
+    totalCount: progress.totalCount,
+    progressPercent: progress.progressPercent,
+    finalized: progress.finalized,
+  };
+}
+
+function buildPreview(content: string | undefined): string {
+  return content?.slice(0, 60) ?? "新对话";
+}
 
 export async function listConversations(userId: string) {
   const conversations = await db.conversation.findMany({
     where: { userId },
     orderBy: { startedAt: "desc" },
     take: 50,
-    include: {
+    select: {
+      ...conversationSelect,
       messages: {
         orderBy: { createdAt: "asc" },
         take: 1,
-        select: { content: true, role: true },
+        select: { content: true },
       },
       _count: { select: { messages: true } },
     },
   });
 
-  return conversations.map((conv) => ({
-    id: conv.id,
-    startedAt: conv.startedAt.toISOString(),
-    preview:
-      conv.messages[0]?.content.slice(0, 60) ??
-      "新对话",
-    messageCount: conv._count.messages,
-  }));
+  return conversations.map((conv) => {
+    const confirmation = mapConversationRecord(conv);
+    return {
+      id: conv.id,
+      startedAt: conv.startedAt.toISOString(),
+      preview: buildPreview(conv.messages[0]?.content),
+      messageCount: conv._count.messages,
+      fields: buildSummaryFields(confirmation),
+    } satisfies ConversationSummary;
+  });
+}
+
+export async function listAllConversationsForAdmin() {
+  const conversations = await db.conversation.findMany({
+    orderBy: { startedAt: "desc" },
+    take: 200,
+    select: {
+      ...conversationSelect,
+      messages: {
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { content: true },
+      },
+      _count: { select: { messages: true } },
+      user: {
+        select: { id: true, email: true, name: true },
+      },
+    },
+  });
+
+  return conversations.map((conv) => {
+    const confirmation = mapConversationRecord(conv);
+    return {
+      id: conv.id,
+      startedAt: conv.startedAt.toISOString(),
+      preview: buildPreview(conv.messages[0]?.content),
+      messageCount: conv._count.messages,
+      fields: buildSummaryFields(confirmation),
+      userId: conv.userId,
+      userEmail: conv.user.email,
+      userName: conv.user.name,
+    } satisfies AdminConversationSummary;
+  });
 }
 
 export async function getConversationMessages(conversationId: string, userId: string) {
@@ -33,6 +128,10 @@ export async function getConversationMessages(conversationId: string, userId: st
 
   if (!conversation) return null;
 
+  return getConversationMessagesById(conversationId);
+}
+
+export async function getConversationMessagesById(conversationId: string) {
   const messages = await db.message.findMany({
     where: {
       conversationId,
@@ -61,12 +160,28 @@ export async function createConversation(userId: string) {
     select: { id: true, startedAt: true },
   });
 
+  const emptyFields = buildSummaryFields(
+    mapConversationRecord({
+      id: conversation.id,
+      policyholderName: null,
+      birthday: null,
+      phone: null,
+      insuredName: null,
+      annualPremium: null,
+      paymentYears: null,
+      coverageUntilAge: null,
+      beneficiary: null,
+      contractConfirmedAt: null,
+    }),
+  );
+
   return {
     id: conversation.id,
     startedAt: conversation.startedAt.toISOString(),
     preview: "新对话",
     messageCount: 0,
-  };
+    fields: emptyFields,
+  } satisfies ConversationSummary;
 }
 
 export async function deleteConversation(

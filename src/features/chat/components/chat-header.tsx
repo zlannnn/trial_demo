@@ -47,8 +47,8 @@ export function ChatHeader({
     <header className="hidden shrink-0 border-b border-border/60 bg-card/30 backdrop-blur-md md:block">
       <div className="flex h-14 items-center justify-between px-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/30 to-teal-600/20 ghost-border">
-            <Phone className="h-4 w-4 text-cyan-400" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-teal-500/10 ghost-border">
+            <Phone className="h-4 w-4 text-primary" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -57,7 +57,7 @@ export function ChatHeader({
               </span>
               <Badge
                 variant="outline"
-                className="border-cyan-500/30 bg-cyan-500/10 text-[10px] text-cyan-300"
+                className="border-primary/30 bg-primary/5 text-[10px] text-primary"
               >
                 {BRAND.scenario}
               </Badge>
@@ -115,7 +115,7 @@ export function ChatHeader({
             icon={Radio}
             label={callStatus}
             active={isRecording || isSpeaking || isLoading}
-            activeColor="text-cyan-400"
+            activeColor="text-primary"
           />
           <StatusPill
             icon={Mic}
@@ -146,7 +146,7 @@ function StatusPill({
   icon: Icon,
   label,
   active,
-  activeColor = "text-emerald-400",
+  activeColor = "text-emerald-600",
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -158,7 +158,7 @@ function StatusPill({
       <span
         className={cn(
           "h-1.5 w-1.5 rounded-full",
-          active ? "bg-emerald-400 shadow-[0_0_6px] shadow-emerald-400/50" : "bg-muted-foreground/40",
+          active ? "bg-emerald-500 shadow-[0_0_6px] shadow-emerald-500/30" : "bg-muted-foreground/40",
         )}
       />
       <Icon className={cn("h-3 w-3", active && activeColor)} />
