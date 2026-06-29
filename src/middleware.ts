@@ -1,16 +1,13 @@
 import NextAuth from "next-auth";
 
-import {
-  authCallbacks,
-  authPages,
-  getAuthSecretFromEnv,
-} from "~/server/auth/shared";
+import { edgeAuthCallbacks } from "~/server/auth/edge-auth-callbacks";
+import { authPages, getAuthSecretFromEnv } from "~/server/auth/shared";
 
 export default NextAuth({
   providers: [],
   secret: getAuthSecretFromEnv(),
   callbacks: {
-    ...authCallbacks,
+    ...edgeAuthCallbacks,
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
       const role = auth?.user?.role ?? "user";

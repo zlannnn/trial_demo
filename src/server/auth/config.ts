@@ -5,10 +5,10 @@ import Google from "next-auth/providers/google";
 import {
   ADMIN_CREDENTIALS,
   ADMIN_USER_ID,
-  authCallbacks,
   authPages,
   isGoogleAuthConfigured,
 } from "./shared";
+import { authCallbacks } from "./auth-callbacks";
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
