@@ -1,5 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 
+import { resolveDbUserIdForAuthUser } from "./ensure-db-user";
+
 export const ADMIN_USER_ID = "admin-system";
 export const ADMIN_CREDENTIALS = { username: "admin", password: "admin" };
 
@@ -8,9 +10,14 @@ export const authPages = {
 } as const;
 
 export const authCallbacks = {
-  jwt({ token, user }) {
-    if (user?.id) {
-      token.id = user.id;
+  async jwt({ token, user }) {
+    if (user) {
+      const dbUserId = await resolveDbUserIdForAuthUser(user);
+      if (dbUserId) {
+        token.id = dbUserId;
+      } else if (user.id) {
+        token.id = user.id;
+      }
     }
     if (user?.role) {
       token.role = user.role;

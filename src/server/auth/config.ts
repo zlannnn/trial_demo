@@ -35,6 +35,8 @@ export const googleProvider = isGoogleAuthConfigured()
   ? Google({
       clientId: process.env.AUTH_GOOGLE_ID!,
       clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+      // 允许将 Google 账号关联到已有同 email 用户（如 ensureDbUser 曾创建的孤儿账号）
+      allowDangerousEmailAccountLinking: true,
     })
   : null;
 
