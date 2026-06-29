@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { resolvePrismaDatabaseEnv } from "./prisma-env.mjs";
 
 if (existsSync(".env.local")) {
   for (const line of readFileSync(".env.local", "utf8").split("\n")) {
@@ -14,6 +15,8 @@ if (existsSync(".env.local")) {
     }
   }
 }
+
+resolvePrismaDatabaseEnv();
 
 const args = process.argv.slice(2);
 const result = spawnSync("npx", ["prisma", ...args], {

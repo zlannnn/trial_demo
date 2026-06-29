@@ -2,10 +2,10 @@
   "name": "ai-voice-assistant",
   "private": true,
   "scripts": {
-    "postinstall": "prisma generate",
+    "postinstall": "node scripts/prisma-with-local-env.mjs generate",
     "dev": "next dev -p 3000",
     "dev:clean": "rm -rf .next && next dev -p 3000",
-    "build": "prisma migrate deploy && next build",
+    "build": "node scripts/vercel-build.mjs",
     "start": "next start",
     "db:generate": "prisma generate",
     "db:migrate": "node scripts/prisma-with-local-env.mjs migrate dev",
